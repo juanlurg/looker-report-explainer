@@ -5,8 +5,9 @@ Automatically generates detailed descriptions for Looker Studio reports using Ge
 Given a CSV list of Looker Studio reports, this tool:
 1. Opens each report in a browser (with saved Google authentication)
 2. Waits for dashboards to fully load
-3. Captures a screenshot and HTML snapshot
-4. Sends everything to Gemini to generate a detailed description
+3. Detects multi-page reports and iterates through all pages
+4. Captures a screenshot and clean HTML (body only, no scripts/styles) for each page
+5. Sends everything to Gemini to generate a detailed description covering all pages
 
 ## Prerequisites
 
@@ -98,22 +99,35 @@ uv run python looker_describer.py reports.csv --reauth
 
 ## Output
 
-All output is saved to the `output/` directory:
+All output is saved to the `output/` directory.
 
+**Single-page reports:**
 ```
 output/
 ├── Sales_Dashboard.txt    # Generated description
 ├── Sales_Dashboard.png    # Full-page screenshot
-├── Sales_Dashboard.html   # HTML snapshot
-├── Marketing_Funnel.txt
-├── Marketing_Funnel.png
-├── Marketing_Funnel.html
+├── Sales_Dashboard.html   # Clean body HTML (no scripts/styles)
 └── ...
 ```
 
+**Multi-page reports:**
+```
+output/
+├── Marketing_Report_page1.png    # Screenshot for page 1
+├── Marketing_Report_page1.html   # Clean HTML for page 1
+├── Marketing_Report_page2.png    # Screenshot for page 2
+├── Marketing_Report_page2.html   # Clean HTML for page 2
+├── Marketing_Report.txt          # Aggregated description for all pages
+└── ...
+```
+
+The HTML files contain only the body content with scripts, styles, and noscript tags removed for cleaner analysis.
+
 ## Customizing the prompt
 
-Edit the `GEMINI_PROMPT` variable at the top of `looker_describer.py` to customize what Gemini generates.
+Edit the prompt templates at the top of `looker_describer.py` to customize what Gemini generates:
+- `GEMINI_PROMPT_SINGLE` - Used for single-page reports
+- `GEMINI_PROMPT_MULTI` - Used for multi-page reports (includes page count and names)
 
 ## Troubleshooting
 
