@@ -1,9 +1,9 @@
-# Looker Report Explainer
+# Looker Studio Report Explainer
 
-Automatically generates detailed descriptions for Looker reports using Gemini 2.5 Flash via Vertex AI.
+Automatically generates detailed descriptions for Looker Studio reports using Gemini 2.5 Flash via Vertex AI.
 
-Given a CSV list of Looker reports, this tool:
-1. Opens each report in a browser (with saved authentication)
+Given a CSV list of Looker Studio reports, this tool:
+1. Opens each report in a browser (with saved Google authentication)
 2. Waits for dashboards to fully load
 3. Captures a screenshot and HTML snapshot
 4. Sends everything to Gemini to generate a detailed description
@@ -13,7 +13,7 @@ Given a CSV list of Looker reports, this tool:
 - Python 3.10+
 - [uv](https://docs.astral.sh/uv/) package manager
 - Google Cloud project with Vertex AI API enabled
-- Access to Looker instance
+- Access to Looker Studio reports (lookerstudio.google.com)
 
 ## Setup
 
@@ -37,7 +37,7 @@ Edit `.env` with your values:
 ```env
 VERTEX_PROJECT_ID=your-gcp-project-id
 VERTEX_LOCATION=us-central1
-LOOKER_BASE_URL=https://your-company.looker.com
+LOOKER_STUDIO_URL=https://lookerstudio.google.com
 ```
 
 ### 3. Authenticate with Google Cloud
@@ -59,15 +59,15 @@ GOOGLE_APPLICATION_CREDENTIALS=/path/to/service-account-key.json
 
 ### Prepare your CSV file
 
-Create a CSV file with your Looker reports. Required columns: `name`, `url`, `description`
+Create a CSV file with your Looker Studio reports. Required columns: `name`, `url`, `description`
 
 Example `reports.csv`:
 
 ```csv
 name,url,description
-Sales Dashboard,https://company.looker.com/dashboards/123,Overview of sales metrics
-Marketing Funnel,https://company.looker.com/dashboards/456,Marketing conversion funnel
-Weekly KPIs,https://company.looker.com/looks/789,Weekly key performance indicators
+Sales Dashboard,https://lookerstudio.google.com/reporting/abc123,Overview of sales metrics
+Marketing Funnel,https://lookerstudio.google.com/reporting/def456,Marketing conversion funnel
+Weekly KPIs,https://lookerstudio.google.com/reporting/ghi789,Weekly key performance indicators
 ```
 
 ### Run the tool
@@ -76,13 +76,13 @@ Weekly KPIs,https://company.looker.com/looks/789,Weekly key performance indicato
 uv run python looker_describer.py reports.csv
 ```
 
-### First run - Looker authentication
+### First run - Looker Studio authentication
 
 On the first run (or if `auth_state.json` doesn't exist):
 
 1. A browser window opens automatically
-2. Navigate to your Looker login if not redirected
-3. Log in with your Google/SSO credentials
+2. You'll be directed to Looker Studio
+3. Log in with your Google account
 4. Once logged in, return to the terminal and press Enter
 5. Your session is saved to `auth_state.json` for future runs
 
@@ -90,7 +90,7 @@ Subsequent runs will use the saved session and run headlessly.
 
 ### Force re-authentication
 
-If your Looker session expires:
+If your Looker Studio session expires:
 
 ```bash
 uv run python looker_describer.py reports.csv --reauth
@@ -125,12 +125,12 @@ Make sure your `.env` file exists and contains `VERTEX_PROJECT_ID=your-project-i
 
 Run `gcloud auth application-default login` and make sure you have access to the project.
 
-### Looker pages not loading correctly
+### Looker Studio pages not loading correctly
 
 - Try increasing `DEFAULT_TIMEOUT` in the script (default: 60 seconds)
-- Use `--reauth` to get a fresh Looker session
-- Check if your Looker instance requires VPN
+- Use `--reauth` to get a fresh Looker Studio session
+- Make sure you have access to the reports you're trying to capture
 
 ### Screenshots are blank or incomplete
 
-Some dashboards take longer to load. Increase the `asyncio.sleep(2)` in `wait_for_looker_load()` to give more time for tiles to render.
+Some dashboards take longer to load. Increase the `asyncio.sleep(2)` in `wait_for_looker_studio_load()` to give more time for charts to render.

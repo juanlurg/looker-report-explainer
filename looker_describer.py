@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-Looker Report Describer
+Looker Studio Report Describer
 
-Processes a CSV of Looker reports, captures screenshots and HTML,
+Processes a CSV of Looker Studio reports, captures screenshots and HTML,
 and generates detailed descriptions using Gemini 2.5 Flash via Vertex AI.
 """
 
@@ -25,13 +25,13 @@ import os
 # Configuration from environment
 VERTEX_PROJECT_ID = os.getenv("VERTEX_PROJECT_ID")
 VERTEX_LOCATION = os.getenv("VERTEX_LOCATION", "us-central1")
-LOOKER_BASE_URL = os.getenv("LOOKER_BASE_URL")
+LOOKER_STUDIO_URL = os.getenv("LOOKER_STUDIO_URL", "https://lookerstudio.google.com")
 
 AUTH_STATE_FILE = "auth_state.json"
 OUTPUT_DIR = "output"
 DEFAULT_TIMEOUT = 60000  # 60 seconds for page loads
 
-GEMINI_PROMPT = """You are analyzing a Looker dashboard/report. Based on the provided information, write a detailed description of this report.
+GEMINI_PROMPT = """You are analyzing a Looker Studio dashboard/report. Based on the provided information, write a detailed description of this report.
 
 **Report Name:** {name}
 
@@ -67,18 +67,19 @@ async def save_auth_state(page, auth_file: str):
     print(f"Authentication state saved to {auth_file}")
 
 
-async def wait_for_looker_load(page, timeout: int = DEFAULT_TIMEOUT):
-    """Wait for Looker dashboard to finish loading."""
+async def wait_for_looker_studio_load(page, timeout: int = DEFAULT_TIMEOUT):
+    """Wait for Looker Studio dashboard to finish loading."""
     try:
         await page.wait_for_load_state("networkidle", timeout=timeout)
 
+        # Looker Studio specific loading selectors
         loading_selectors = [
-            ".lk-loading",
+            "[data-loading='true']",
             ".loading-spinner",
             "[data-testid='loading']",
-            ".dashboard-loading",
-            ".viz-loading",
-            "lk-spinner",
+            "[aria-busy='true']",
+            ".lsapp-loading-indicator",
+            "[class*='loading']",
         ]
 
         for selector in loading_selectors:
@@ -103,7 +104,7 @@ async def capture_report(page, url: str, output_path: Path, name: str):
     await page.goto(url, wait_until="domcontentloaded")
 
     print("  Waiting for dashboard to load...")
-    await wait_for_looker_load(page)
+    await wait_for_looker_studio_load(page)
 
     safe_name = sanitize_filename(name)
 
@@ -145,21 +146,21 @@ def generate_description(
     return response.text
 
 
-async def run_auth_flow(playwright, looker_url: str):
+async def run_auth_flow(playwright, looker_studio_url: str):
     """Run interactive authentication flow."""
     print("\n=== Authentication Required ===")
-    print("A browser window will open. Please log in to Looker.")
+    print("A browser window will open. Please log in to Looker Studio with your Google account.")
     print("After successful login, press Enter in this terminal to continue...")
 
     browser = await playwright.chromium.launch(headless=False)
     context = await browser.new_context()
     page = await context.new_page()
 
-    if not looker_url:
-        looker_url = input("Enter your Looker base URL (e.g., https://company.looker.com): ").strip()
+    if not looker_studio_url:
+        looker_studio_url = input("Enter your Looker Studio URL (e.g., https://lookerstudio.google.com): ").strip()
 
-    print(f"Opening: {looker_url}")
-    await page.goto(looker_url)
+    print(f"Opening: {looker_studio_url}")
+    await page.goto(looker_studio_url)
 
     input("\nPress Enter after you have successfully logged in...")
 
@@ -197,7 +198,7 @@ async def process_reports(csv_path: str):
 
     async with async_playwright() as playwright:
         if not Path(AUTH_STATE_FILE).exists():
-            await run_auth_flow(playwright, LOOKER_BASE_URL)
+            await run_auth_flow(playwright, LOOKER_STUDIO_URL)
 
         browser = await playwright.chromium.launch(headless=True)
         context = await browser.new_context(storage_state=AUTH_STATE_FILE)
@@ -240,7 +241,7 @@ async def process_reports(csv_path: str):
 
 def main():
     parser = argparse.ArgumentParser(
-        description="Generate detailed descriptions for Looker reports using Gemini via Vertex AI"
+        description="Generate detailed descriptions for Looker Studio reports using Gemini via Vertex AI"
     )
     parser.add_argument(
         "csv_file",
